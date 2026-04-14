@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "unity": "6000.3",
   "unityRelease": "7f1",
-  "description": "Replace this with your own description of the package. \n\nFor best results, use this text to summarize: \n▪ What the package does \n▪ How it can benefit the user \n\nNote: Special formatting characters are supported, including line breaks ('\\n') and bullets ('\\u25AA').",
+  "description": "A professional routing and navigation framework designed for modern Unity applications. Built with **Clean Architecture** principles, it provides a seamless way to manage complex UI flows, nested views, and cross-scene navigation.",
   "dependencies": {
     "com.unity.addressables": "2.8.1"
   },
