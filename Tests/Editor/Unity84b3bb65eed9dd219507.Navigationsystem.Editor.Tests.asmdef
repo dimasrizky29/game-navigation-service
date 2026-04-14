@@ -1,0 +1,14 @@
+{
+    "name": "Unity84b3bb65eed9dd219507.Navigationsystem.Editor.Tests",
+    "references": [
+        "Unity84b3bb65eed9dd219507.Navigationsystem.Editor",
+        "Unity84b3bb65eed9dd219507.Navigationsystem"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}

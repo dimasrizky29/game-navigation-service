@@ -1,0 +1,10 @@
+{
+    "name": "Unity84b3bb65eed9dd219507.Navigationsystem.Editor",
+    "references": [
+      "Unity84b3bb65eed9dd219507.Navigationsystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
