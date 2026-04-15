@@ -78,11 +78,6 @@ For detailed technical guides, implementation details, and API reference, please
 
 ---
 
-## 🤝 Contributing
-Interested in contributing? Please read our contributing guidelines first.
-
----
-
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
