@@ -38,21 +38,26 @@ Located in `Runtime/Core/Navigation`. Provides base implementations for UI compo
 
 ## Technical Flow
 
-```
+```mermaid
 graph TD
     A[Caller] -->|NavigateTo| B[NavigationService]
     B -->|Check Config| C[NavigationConfig]
     C -->|Return RouteDefinition| B
     B -->|Auth Guard| D{Authenticated?}
-    D -- No -->|Redirect| E[Login Route]
-    D -- Yes --> F{Route Type?}
-    F -- ScenePage --> G[HandleSceneNavigation]
-    F -- Window/Popup --> H[HandleWindowNavigation]
+
+    D -->|No: Redirect| E[Login Route]
+    D -->|Yes| F{Route Type?}
+
+    F -->|ScenePage| G[HandleSceneNavigation]
+    F -->|Window/Popup| H[HandleWindowNavigation]
+
     G -->|Load Scene| I[SceneManager]
     I -->|RegisterView| J[ScenePageContainer]
     J -->|GetPanel| K[BasePagePanel]
+
     H -->|Load Addressable| L[Addressables]
     L -->|Instantiate| M[IViewPanel Instance]
+
     K -->|Show| N[UI Screen]
     M -->|Show| N
 ```
