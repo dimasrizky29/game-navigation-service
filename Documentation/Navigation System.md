@@ -38,7 +38,7 @@ Located in `Runtime/Core/Navigation`. Provides base implementations for UI compo
 
 ## Technical Flow
 
-```mermaid
+```
 graph TD
     A[Caller] -->|NavigateTo| B[NavigationService]
     B -->|Check Config| C[NavigationConfig]
