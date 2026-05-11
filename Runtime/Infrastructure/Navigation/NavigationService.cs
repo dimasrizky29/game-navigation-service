@@ -165,7 +165,7 @@ public class NavigationService : INavigationService, IDisposable
         // A. Pindah Scene jika perlu
         if (currentScene != targetSceneName)
         {
-            _uiBridge.ShowLoading(true);
+            _uiBridge.TransitionPanel(true, config.TargetScene);
 
             try
             {
@@ -188,7 +188,7 @@ public class NavigationService : INavigationService, IDisposable
             }
             finally
             {
-                _uiBridge.ShowLoading(false);
+                _uiBridge.TransitionPanel(false, config.TargetScene);
             }
         }
         

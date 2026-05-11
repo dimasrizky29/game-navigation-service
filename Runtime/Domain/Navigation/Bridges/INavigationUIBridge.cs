@@ -2,6 +2,6 @@ using UnityEngine;
 
 public interface INavigationUIBridge
 {
-    void ShowLoading(bool show);
+    void TransitionPanel(bool show, string targetScene);
     Transform GetLayer(NavType navType);
 }
