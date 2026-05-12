@@ -176,7 +176,15 @@ public class NavigationService : INavigationService, IDisposable
                 _currentSceneContainer = null;
                 _sceneLoadTcs = new UniTaskCompletionSource<IPageContainer>();
 
-                await SceneManager.LoadSceneAsync(targetSceneName).ToUniTask(cancellationToken: token);
+                // Buat progress handler
+                // Nilai 'p' adalah float dari 0.0 sampai 1.0
+                var progressProvider = Progress.Create<float>(p =>
+                {
+                    _uiBridge.UpdateTransitionProgress(p);
+                });
+
+                await SceneManager.LoadSceneAsync(targetSceneName)
+                    .ToUniTask(progress: progressProvider, cancellationToken: token);
                 await _sceneLoadTcs.Task.Timeout(TimeSpan.FromSeconds(5)); // Tunggu RegisterView
 
                 await UniTask.Delay(2000);
