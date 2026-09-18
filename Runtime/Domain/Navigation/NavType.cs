@@ -1,6 +1,9 @@
-public enum NavType
+namespace YatechStudio.Navigation.Domain
 {
-    ScenePage,      // Panel biasa yang menempel di Scene (contoh: Main Menu, HUD)
-    Window,         // Floating Fullscreen (contoh: Shop, Inventory) - via Addressables
-    Popup           // Floating Small (contoh: Confirmation) - via Addressables
+    public enum NavType
+    {
+        ScenePage,
+        Window,
+        Popup
+    }
 }

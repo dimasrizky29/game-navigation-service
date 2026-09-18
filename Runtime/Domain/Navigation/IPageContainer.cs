@@ -1,7 +1,8 @@
-using UnityEngine;
-
-public interface IPageContainer
+namespace YatechStudio.Navigation.Domain
 {
-    public void HideAllPanels();
-    public IViewPanel GetPanel(string routeId);
+    public interface IPageContainer
+    {
+        void HideAllPanels();
+        IViewPanel GetPanel(string routeId);
+    }
 }

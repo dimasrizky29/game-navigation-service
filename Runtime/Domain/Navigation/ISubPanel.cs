@@ -1,8 +1,9 @@
-public interface ISubPanel : IViewPanel
+namespace YatechStudio.Navigation.Domain
 {
-    // Identitas unik di dalam Page (misal: "Avatar", "Username")
-    string SubPanelId { get; }
+    public interface ISubPanel : IViewPanel
+    {
+        string SubPanelId { get; }
 
-    // Mengenal siapa managernya agar bisa lapor (misal: minta Back)
-    void Initialize(IPagePanel parent);
+        void Initialize(IPagePanel parent);
+    }
 }

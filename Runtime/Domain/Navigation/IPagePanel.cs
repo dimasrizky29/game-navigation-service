@@ -1,13 +1,13 @@
-public interface IPagePanel : IViewPanel
+namespace YatechStudio.Navigation.Domain
 {
-    // Menerima data dari NavigationService (Deep Linking)
-    void SetPayload(object payload);
+    public interface IPagePanel : IViewPanel
+    {
+        void SetPayload(object payload);
 
-    // Kontrol internal untuk Sub-Panel
-    void SwitchSubPanel(string subPanelId, bool addToHistory = true);
+        void SwitchSubPanel(string subPanelId, bool addToHistory = true);
 
-    // Fungsi 'Back' lokal (cek history internal dulu baru global)
-    void Back();
+        void Back();
 
-    bool TryBackSubPanel();
+        bool TryBackSubPanel();
+    }
 }

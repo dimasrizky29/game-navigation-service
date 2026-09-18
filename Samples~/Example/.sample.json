@@ -1,4 +1,4 @@
 {
-	"displayName":"Example Sample",
-	"description": "Replace this string with your own description of the sample. Delete the Samples folder if not needed."
+    "displayName": "Navigation System Example",
+    "description": "Complete navigation demo: MainMenu + Shop scenes, page/popup/window route types, auth-guard flow, mock bridges, and VContainer DI bootstrap."
 }

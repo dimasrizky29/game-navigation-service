@@ -1,26 +1,40 @@
 {
   "name": "com.yatechstudio.navigationsystem",
   "displayName": "Navigation System",
-  "version": "0.1.0",
-  "unity": "6000.3",
-  "unityRelease": "7f1",
-  "description": "A professional routing and navigation framework designed for modern Unity applications. Built with **Clean Architecture** principles, it provides a seamless way to manage complex UI flows, nested views, and cross-scene navigation.",
-  "dependencies": {
-    "com.unity.addressables": "2.8.1"
-  },
+  "version": "0.2.1",
+  "unity": "6000.0",
+  "description": "A professional routing and navigation framework for Unity. Decoupled scene-based pages, Addressable windows and popups, nested sub-panel history, auth guards and automatic Addressable lifecycle management, with Clean Architecture layering and VContainer-friendly dependency injection.",
+  "keywords": [
+    "navigation",
+    "routing",
+    "ui",
+    "scene",
+    "addressables",
+    "popup",
+    "vcontainer",
+    "unitask"
+  ],
   "author": {
-    "name": "Yatech studio",
+    "name": "Yatech Studio",
     "url": "https://github.com/yatech-studio"
   },
+  "license": "MIT",
+  "licensesUrl": "https://github.com/yatech-studio/game-navigation-service/blob/main/LICENSE",
+  "documentationUrl": "https://github.com/yatech-studio/game-navigation-service/blob/main/Documentation/Navigation%20System.md",
+  "changelogUrl": "https://github.com/yatech-studio/game-navigation-service/blob/main/CHANGELOG.md",
+  "dependencies": {
+    "com.unity.addressables": "2.8.1",
+    "com.cysharp.unitask": "2.5.11",
+    "jp.hadashikick.vcontainer": "1.17.0"
+  },
   "repository": {
-    "url": "https://github.com/yatech-studio/game-template-yatech.git",
-    "type": "git",
-    "revision": "9aa900d34618e236c4f6389015e0edab2536204a"
+    "url": "https://github.com/yatech-studio/game-navigation-service.git",
+    "type": "git"
   },
   "samples": [
     {
-      "displayName": "Example Sample",
-      "description": "Replace this string with your own description of the sample. Delete the Samples folder if not needed.",
+      "displayName": "Navigation System Example",
+      "description": "Complete navigation demo: MainMenu + Shop scenes, page/popup/window route types, auth-guard flow, mock bridges, and VContainer DI bootstrap.",
       "path": "Samples~/Example"
     }
   ]

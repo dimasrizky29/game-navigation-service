@@ -1,10 +1,19 @@
 {
-    "name": "Unity84b3bb65eed9dd219507.Navigationsystem.Editor",
-    "references": [
-      "Unity84b3bb65eed9dd219507.Navigationsystem"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
-    "excludePlatforms": []
+  "name": "Yatechstudio.Navigationsystem.Editor",
+  "rootNamespace": "YatechStudio.Navigation.Editor",
+  "references": [
+    "Yatechstudio.Navigationsystem",
+    "GUID:9e24947de15b9834991c9d8411ea37cf"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
 }

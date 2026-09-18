@@ -1,78 +1,84 @@
-using UnityEngine;
-using Cysharp.Threading.Tasks;
 using System.Threading;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using YatechStudio.Navigation.Domain;
 
-[RequireComponent(typeof(CanvasGroup))]
-public class BaseSubPanel : MonoBehaviour, ISubPanel
+namespace YatechStudio.Navigation.Core
 {
-    [Header("Sub Panel Settings")]
-    [SerializeField] private string _subPanelId;
-    [SerializeField] protected float fadeDuration = 0.1f; // Tab biasanya lebih cepat dari Page
-
-    public string SubPanelId => _subPanelId;
-
-    protected IPagePanel _parent;
-    protected CanvasGroup _canvasGroup;
-
-    public bool IsActive => gameObject.activeSelf && _canvasGroup != null && _canvasGroup.alpha > 0.9f;
-
-    public void Initialize(IPagePanel parent)
+    /// <summary>
+    /// Base class for a panel nested inside a <see cref="BasePagePanel"/> (tabs, edit dialogs,
+    /// sub-screens). Owns its own fade so concurrent switches cannot race over the alpha value.
+    /// </summary>
+    [RequireComponent(typeof(CanvasGroup))]
+    public class BaseSubPanel : MonoBehaviour, ISubPanel
     {
-        _parent = parent;
-        _canvasGroup = GetComponent<CanvasGroup>();
-    }
+        [Header("Sub Panel Settings")]
+        [SerializeField] private string subPanelId;
 
-    public async UniTask Show(CancellationToken token = default)
-    {
-        gameObject.SetActive(true);
-        _canvasGroup.blocksRaycasts = true;
+        [SerializeField] protected float fadeDuration = 0.1f;
 
-        await Fade(1, token);
+        protected IPagePanel _parent;
+        protected CanvasGroup _canvasGroup;
 
-        _canvasGroup.interactable = true;
-    }
+        private CanvasGroupFader _fader;
 
-    public async UniTask Hide(CancellationToken token = default)
-    {
-        _canvasGroup.interactable = false;
-        _canvasGroup.blocksRaycasts = false;
+        public string SubPanelId => subPanelId;
 
-        await Fade(0, token);
+        public bool IsActive => gameObject.activeSelf && _canvasGroup != null && _canvasGroup.alpha > 0.9f;
 
-        gameObject.SetActive(false);
-    }
-
-    public void SetVisibilityImmediate(bool isVisible)
-    {
-        if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
-
-        _canvasGroup.alpha = isVisible ? 1 : 0;
-        _canvasGroup.blocksRaycasts = isVisible;
-        _canvasGroup.interactable = isVisible;
-        gameObject.SetActive(isVisible);
-    }
-
-    // Logic Fade yang sama dengan BasePagePanel agar konsisten
-    protected async UniTask Fade(float targetAlpha, CancellationToken token)
-    {
-        if (_canvasGroup == null) return;
-
-        float startAlpha = _canvasGroup.alpha;
-        float elapsed = 0;
-
-        while (elapsed < fadeDuration)
+        public void Initialize(IPagePanel parent)
         {
-            if (token.IsCancellationRequested) return;
+            _parent = parent;
 
-            elapsed += Time.deltaTime;
-            _canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / fadeDuration);
-            await UniTask.Yield(PlayerLoopTiming.Update, token);
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                _fader = new CanvasGroupFader(_canvasGroup, fadeDuration);
+            }
         }
-        _canvasGroup.alpha = targetAlpha;
-    }
 
-    public void SetPayload(object payload)
-    {
-        // Bisa di-override oleh class child jika butuh data spesifik
+        protected virtual void OnDestroy() => _fader?.Cancel();
+
+        public virtual async UniTask Show(CancellationToken token = default)
+        {
+            gameObject.SetActive(true);
+
+            EnsureFader();
+            if (_canvasGroup.blocksRaycasts && _canvasGroup.alpha >= 1f)
+            {
+                _canvasGroup.interactable = true;
+                return;
+            }
+
+            _canvasGroup.blocksRaycasts = true;
+            await _fader.FadeAsync(1f, token);
+            _canvasGroup.interactable = true;
+        }
+
+        public virtual async UniTask Hide(CancellationToken token = default)
+        {
+            EnsureFader();
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
+
+            await _fader.FadeAsync(0f, token);
+            gameObject.SetActive(false);
+        }
+
+        public virtual void SetVisibilityImmediate(bool isVisible)
+        {
+            EnsureFader();
+            _fader.ApplyImmediate(isVisible);
+            gameObject.SetActive(isVisible);
+        }
+
+        /// <summary>Override to receive the payload routed to this sub-panel.</summary>
+        public virtual void SetPayload(object payload) { }
+
+        private void EnsureFader()
+        {
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+            if (_fader == null) _fader = new CanvasGroupFader(_canvasGroup, fadeDuration);
+        }
     }
 }

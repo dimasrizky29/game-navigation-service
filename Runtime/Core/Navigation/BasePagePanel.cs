@@ -3,188 +3,189 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using VContainer;
+using YatechStudio.Navigation.Domain;
 
-[RequireComponent(typeof(CanvasGroup))]
-public abstract class BasePagePanel : MonoBehaviour, IPagePanel
+namespace YatechStudio.Navigation.Core
 {
-    [Header("Transition Settings")]
-    [SerializeField] protected float fadeDuration = 0.15f;
-
-    protected string _defaultSubPanelId = "Main";
-
-    protected CanvasGroup _canvasGroup;
-    protected Dictionary<string, ISubPanel> _subPanelCache = new();
-    protected Stack<string> _history = new();
-    protected string _currentSubId;
-
-    [Inject] protected INavigationService _navigationService;
-    [Inject] protected INavigationAudioBridge _audioBridge;
-
-    public bool IsActive => gameObject.activeSelf && _canvasGroup != null && _canvasGroup.alpha > 0.9f;
-
-    protected virtual void Awake()
+    /// <summary>
+    /// Base class for a route destination that lives inside a scene. Handles fade transitions
+    /// and nested sub-panel navigation.
+    /// </summary>
+    [RequireComponent(typeof(CanvasGroup))]
+    public abstract class BasePagePanel : MonoBehaviour, IPagePanel
     {
-        _canvasGroup = GetComponent<CanvasGroup>();
+        [Header("Transition Settings")]
+        [SerializeField] protected float fadeDuration = 0.15f;
 
-        // --- AUTO DISCOVERY ---
-        EnsureSubPanelsInitialized();
-    }
+        [Tooltip("Sub-panel shown when the page opens, and the id used as the root of the sub-panel stack.")]
+        [SerializeField] protected string defaultSubPanelId = "Main";
 
-    protected void EnsureSubPanelsInitialized()
-    {
-        if (_subPanelCache.Count > 0) return;
+        protected CanvasGroup _canvasGroup;
+        protected readonly Dictionary<string, ISubPanel> _subPanelCache = new Dictionary<string, ISubPanel>();
+        protected readonly Stack<string> _history = new Stack<string>();
+        protected string _currentSubId;
 
-        var children = GetComponentsInChildren<ISubPanel>(true);
-        foreach (var sub in children)
+        private CanvasGroupFader _fader;
+
+        [Inject] protected INavigationService _navigationService;
+        [Inject] protected INavigationAudioBridge _audioBridge;
+
+        protected string DefaultSubPanelId => string.IsNullOrEmpty(defaultSubPanelId) ? "Main" : defaultSubPanelId;
+
+        public bool IsActive => gameObject.activeSelf && _canvasGroup != null && _canvasGroup.alpha > 0.9f;
+
+        protected virtual void Awake()
         {
-            if (!_subPanelCache.ContainsKey(sub.SubPanelId))
+            _canvasGroup = GetComponent<CanvasGroup>();
+            _fader = new CanvasGroupFader(_canvasGroup, fadeDuration);
+            EnsureSubPanelsInitialized();
+        }
+
+        protected virtual void OnDestroy()
+        {
+            _fader?.Cancel();
+        }
+
+        /// <summary>
+        /// Discovers and initialises every <see cref="ISubPanel"/> in the hierarchy. Safe to call
+        /// repeatedly — the cache is only built once.
+        /// </summary>
+        protected void EnsureSubPanelsInitialized()
+        {
+            if (_subPanelCache.Count > 0) return;
+
+            var children = GetComponentsInChildren<ISubPanel>(true);
+            foreach (var sub in children)
             {
+                if (sub == null) continue;
+
+                var id = sub.SubPanelId;
+                if (string.IsNullOrEmpty(id))
+                {
+                    Debug.LogWarning($"[Nav] A sub-panel under '{name}' has an empty SubPanelId and is ignored.", this);
+                    continue;
+                }
+
+                if (_subPanelCache.ContainsKey(id))
+                {
+                    Debug.LogWarning($"[Nav] Duplicate SubPanelId '{id}' under '{name}'. The first one wins.", this);
+                    continue;
+                }
+
                 sub.Initialize(this);
-                _subPanelCache.Add(sub.SubPanelId, sub);
+                _subPanelCache.Add(id, sub);
                 sub.SetVisibilityImmediate(false);
             }
         }
-    }
 
-    public virtual void SetPayload(object payload)
-    {
-        EnsureSubPanelsInitialized();
-        LoggerService.LogDebug($"[BasePagePanel] Payload: {payload}");
+        // ---------------------------------------------------------------- IPagePanel
 
-        // Jika tidak ada sub-panel, abaikan payload ini
-        if (_subPanelCache.Count == 0) return;
-
-        string targetId = (payload is string s) ? s : _defaultSubPanelId;
-        if (!string.IsNullOrEmpty(targetId))
+        public virtual void SetPayload(object payload)
         {
-            SwitchSubPanel(targetId, true);
-        }
-    }
+            EnsureSubPanelsInitialized();
+            if (_subPanelCache.Count == 0) return;
 
-    public virtual async UniTask Show(CancellationToken token = default)
-    {
-        gameObject.SetActive(true);
-        _canvasGroup.blocksRaycasts = true;
-
-        // Jika ada sub-panel default, pastikan dia siap sebelum fade
-        if (!string.IsNullOrEmpty(_defaultSubPanelId) && string.IsNullOrEmpty(_currentSubId))
-        {
-            SwitchSubPanel(_defaultSubPanelId, false);
+            var targetId = payload as string;
+            SwitchSubPanel(string.IsNullOrEmpty(targetId) ? DefaultSubPanelId : targetId, true);
         }
 
-        await Fade(1, token);
-        _canvasGroup.interactable = true;
-    }
-
-    public virtual async UniTask Hide(CancellationToken token = default)
-    {
-        _canvasGroup.interactable = false;
-        _canvasGroup.blocksRaycasts = false;
-
-        await Fade(0, token);
-
-        _history.Clear();
-        _currentSubId = null;
-        gameObject.SetActive(false);
-    }
-
-    public virtual void SetVisibilityImmediate(bool isVisible)
-    {
-        if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
-
-        _canvasGroup.alpha = isVisible ? 1 : 0;
-        _canvasGroup.blocksRaycasts = isVisible;
-        _canvasGroup.interactable = isVisible;
-        gameObject.SetActive(isVisible);
-    }
-
-    public virtual void SwitchSubPanel(string subPanelId, bool addToHistory = true)
-    {
-        // Jika ID adalah "Main", kita anggap ini kembali ke tampilan awal (tanpa sub-panel)
-        if (subPanelId == _defaultSubPanelId)
+        public virtual async UniTask Show(CancellationToken token = default)
         {
-            if (addToHistory && !string.IsNullOrEmpty(_currentSubId))
+            gameObject.SetActive(true);
+
+            if (_canvasGroup.blocksRaycasts && _canvasGroup.alpha >= 1f)
             {
-                _history.Push(_currentSubId);
+                _canvasGroup.interactable = true;
+                return;
             }
 
-            // Matikan semua sub-panel yang terdaftar
-            foreach (var sub in _subPanelCache.Values) sub.Hide().Forget();
-            _currentSubId = _defaultSubPanelId;
-            return;
+            _canvasGroup.blocksRaycasts = true;
+
+            if (string.IsNullOrEmpty(_currentSubId) && _subPanelCache.ContainsKey(DefaultSubPanelId))
+                SwitchSubPanel(DefaultSubPanelId, false);
+
+            await _fader.FadeAsync(1f, token);
+            _canvasGroup.interactable = true;
         }
 
-        if (!_subPanelCache.ContainsKey(subPanelId))
+        public virtual async UniTask Hide(CancellationToken token = default)
         {
-            LoggerService.Warning($"SubPanel ID '{subPanelId}' tidak ditemukan di cache!");
-            return;
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
+
+            await _fader.FadeAsync(0f, token);
+
+            _history.Clear();
+            _currentSubId = null;
+            gameObject.SetActive(false);
         }
 
-        if (addToHistory && _currentSubId != subPanelId)
+        public virtual void SetVisibilityImmediate(bool isVisible)
         {
-            // Jika sebelumnya null atau Main, push "Main" ke history
-            _history.Push(string.IsNullOrEmpty(_currentSubId) ? _defaultSubPanelId : _currentSubId);
+            if (_canvasGroup == null) _canvasGroup = GetComponent<CanvasGroup>();
+            _fader?.ApplyImmediate(isVisible);
+            gameObject.SetActive(isVisible);
         }
 
-        foreach (var sub in _subPanelCache.Values)
+        public virtual void SwitchSubPanel(string subPanelId, bool addToHistory = true)
         {
-            if (sub.SubPanelId == subPanelId) sub.Show().Forget();
-            else sub.Hide().Forget();
+            EnsureSubPanelsInitialized();
+
+            if (subPanelId == DefaultSubPanelId)
+            {
+                if (addToHistory && !string.IsNullOrEmpty(_currentSubId) && _currentSubId != DefaultSubPanelId)
+                    _history.Push(_currentSubId);
+
+                _currentSubId = DefaultSubPanelId;
+                foreach (var sub in _subPanelCache.Values)
+                    sub.SetVisibilityImmediate(false);
+
+                return;
+            }
+
+            if (!_subPanelCache.TryGetValue(subPanelId, out var target))
+            {
+                Debug.LogWarning($"[Nav] SubPanel '{subPanelId}' not found under '{name}'.", this);
+                return;
+            }
+
+            if (addToHistory && _currentSubId != subPanelId)
+                _history.Push(string.IsNullOrEmpty(_currentSubId) ? DefaultSubPanelId : _currentSubId);
+
+            _currentSubId = subPanelId;
+
+            foreach (var sub in _subPanelCache.Values)
+            {
+                if (ReferenceEquals(sub, target))
+                    sub.Show().Forget(OnSubPanelError);
+                else
+                    sub.SetVisibilityImmediate(false);
+            }
         }
 
-        _currentSubId = subPanelId;
-    }
-
-    public virtual void Back()
-    {
-        // sound close
-        _audioBridge.PlayBackSound();
-
-        LoggerService.LogDebug($"Back Pressed. Current History Count: {_history.Count}");
-
-        if (_history.Count > 0)
+        public virtual void Back()
         {
-            string previousId = _history.Pop();
-            SwitchSubPanel(previousId, false);
+            _audioBridge?.PlayBackSound();
+
+            if (_history.Count > 0)
+            {
+                SwitchSubPanel(_history.Pop(), false);
+                return;
+            }
+
+            _navigationService.GoBack().Forget(OnSubPanelError);
         }
-        else
+
+        public virtual bool TryBackSubPanel()
         {
-            // Jika history benar-benar habis, baru kembali ke Route sebelumnya
-            LoggerService.LogDebug("History empty, navigating back to previous route.");
-            _navigationService.GoBack().Forget();
-        }
-    }
+            if (_history.Count == 0) return false;
 
-    public virtual bool TryBackSubPanel()
-    {
-        if (_history.Count > 0)
-        {
-            // sound close
-            _audioBridge.PlayBackSound();
-
-            string previousId = _history.Pop();
-            SwitchSubPanel(previousId, false);
-            return true; // Berhasil menutup sub-panel
+            _audioBridge?.PlayBackSound();
+            SwitchSubPanel(_history.Pop(), false);
+            return true;
         }
 
-        // Jika history sub-panel habis, kembalikan false.
-        // Kita TIDAK memanggil GoBack() di sini. Biarkan layer di atasnya yang urus.
-        return false;
-    }
-
-    private async UniTask Fade(float targetAlpha, CancellationToken token)
-    {
-        float startAlpha = _canvasGroup.alpha;
-        float elapsed = 0;
-
-        while (elapsed < fadeDuration)
-        {
-            if (token.IsCancellationRequested) return;
-
-            elapsed += Time.deltaTime;
-            _canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / fadeDuration);
-            await UniTask.Yield(PlayerLoopTiming.Update, token);
-        }
-        _canvasGroup.alpha = targetAlpha;
+        private static void OnSubPanelError(System.Exception e)
+            => Debug.LogException(e);
     }
 }
